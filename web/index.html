@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriMandi AI | Mandi Price Prediction Dashboard</title>
+  <meta name="description" content="ML-based mandi price prediction for Onion and Tomato using Linear Regression, Ridge, k-NN, and Neural Network models.">
+  
+  <!-- Modern Typography from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js for Interactive Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+  <!-- Background Glow Accents -->
+  <div class="ambient-glow glow-top-left"></div>
+  <div class="ambient-glow glow-top-right"></div>
+  <div class="ambient-glow glow-bottom-center"></div>
+
+  <div class="app-container">
+    <!-- Header Navigation -->
+    <header class="app-header" id="mainHeader">
+      <div class="header-left">
+        <div class="brand-badge">
+          <span class="brand-icon">🌱</span>
+          <span class="brand-tag">Agmarknet ML Project</span>
+        </div>
+        <h1 class="app-title">Mandi Price Prediction System</h1>
+        <p class="app-subtitle">Predicting next week's wholesale price of <strong>Onion</strong> & <strong>Tomato</strong> using Machine Learning</p>
+      </div>
+
+      <div class="header-right">
+        <!-- SDG Alignments -->
+        <div class="sdg-badges" id="sdgBadges">
+          <div class="sdg-pill sdg-2" title="SDG 2: Zero Hunger - Helping stabilize food prices">
+            <span class="sdg-num">2</span>
+            <span class="sdg-label">Zero Hunger</span>
+          </div>
+          <div class="sdg-pill sdg-12" title="SDG 12: Responsible Consumption & Production">
+            <span class="sdg-num">12</span>
+            <span class="sdg-label">Responsible Markets</span>
+          </div>
+        </div>
+
+        <div class="live-status-card" id="liveStatusCard">
+          <div class="status-indicator-dot pulse"></div>
+          <div class="status-details">
+            <span class="status-caption">DATA SOURCE: AGMARKNET (agmarknet.gov.in)</span>
+            <span class="status-timestamp" id="lastUpdatedTime">45 Days Sample Data</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Control Center / Toolbar -->
+    <section class="control-panel" id="controlPanel">
+      <!-- Commodity Switcher -->
+      <div class="control-group">
+        <label class="control-label">SELECT COMMODITY</label>
+        <div class="segmented-control" id="commoditySwitcher">
+          <button class="seg-btn active" data-commodity="Onion" id="btnCommodityOnion">
+            <span class="seg-icon">🧅</span> Onion
+          </button>
+          <button class="seg-btn" data-commodity="Tomato" id="btnCommodityTomato">
+            <span class="seg-icon">🍅</span> Tomato
+          </button>
+        </div>
+      </div>
+
+      <!-- Mandi Selector -->
+      <div class="control-group">
+        <label class="control-label" for="mandiSelect">SELECT MANDI (MARKET)</label>
+        <div class="custom-select-wrapper">
+          <select id="mandiSelect" class="form-select">
+            <!-- Dynamically populated -->
+          </select>
+          <span class="select-chevron">▾</span>
+        </div>
+      </div>
+
+      <!-- Model Selector -->
+      <div class="control-group">
+        <label class="control-label" for="modelSelect">ML MODEL</label>
+        <div class="custom-select-wrapper">
+          <select id="modelSelect" class="form-select">
+            <option value="k-NN Regressor">k-NN (k-Nearest Neighbors)</option>
+            <option value="MLP Neural Network">MLP Neural Network</option>
+            <option value="Ridge Regression">Ridge Regression (with Regularization)</option>
+            <option value="Linear Regression">Linear Regression</option>
+            <option value="Naive Baseline">Naive Baseline (No ML)</option>
+          </select>
+          <span class="select-chevron">▾</span>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="control-group action-group">
+        <label class="control-label">ACTIONS</label>
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="btnOpenPaperModal">
+            <span class="btn-icon">📄</span> About This Project
+          </button>
+          <button class="btn btn-outline" id="btnToggleOutliers">
+            <span class="btn-icon">🧹</span> Data Cleaning Info
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Price Alert Banner -->
+    <section class="alert-banner" id="earlyWarningBanner">
+      <div class="alert-icon-col" id="alertIconWrapper">
+        <span class="alert-big-icon" id="alertIcon">⚠️</span>
+      </div>
+      <div class="alert-content-col">
+        <div class="alert-header">
+          <span class="alert-badge" id="alertBadge">PRICE PREDICTION</span>
+          <span class="alert-horizon-tag">Next 7 Days Prediction</span>
+          <span class="alert-delta" id="alertDeltaText">+5.4% Expected</span>
+        </div>
+        <p class="alert-description" id="alertRecommendation">
+          A small price increase is expected based on recent market trends.
+        </p>
+      </div>
+      <div class="alert-metric-col">
+        <div class="alert-metric-label">PREDICTED NEXT-WEEK PRICE</div>
+        <div class="alert-metric-val" id="alertTargetPrice">Rs 3,800 <small>/ quintal</small></div>
+        <div class="alert-metric-sub" id="alertBasePrice">Current: Rs 3,600 / quintal</div>
+      </div>
+    </section>
+
+    <!-- Key Numbers Cards -->
+    <section class="kpi-grid" id="kpiGrid">
+      <!-- Card 1: Current Price -->
+      <div class="kpi-card" id="kpiCardPrice">
+        <div class="kpi-header">
+          <span class="kpi-title">Today's Price</span>
+          <span class="kpi-chip">Latest</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value-row">
+            <span class="kpi-currency">Rs</span>
+            <span class="kpi-value" id="kpiCurrentPrice">--</span>
+            <span class="kpi-unit">/ Quintal</span>
+          </div>
+          <div class="kpi-meta" id="kpiPriceMeta">
+            <span class="kpi-delta-pill positive" id="kpiPriceChange">--</span>
+            <span class="kpi-subtext">vs 7 days ago</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Predicted Price -->
+      <div class="kpi-card highlight-card" id="kpiCardForecast">
+        <div class="kpi-header">
+          <span class="kpi-title">Predicted Price (After 7 Days)</span>
+          <span class="kpi-chip active-chip" id="kpiModelChip">k-NN</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value-row">
+            <span class="kpi-currency">Rs</span>
+            <span class="kpi-value" id="kpiForecastPrice">--</span>
+            <span class="kpi-unit">/ Quintal</span>
+          </div>
+          <div class="kpi-meta">
+            <span class="kpi-delta-pill" id="kpiForecastChange">--</span>
+            <span class="kpi-subtext" id="kpiForecastRange">Expected Range: Rs -- to Rs --</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Mandi Arrivals -->
+      <div class="kpi-card" id="kpiCardArrivals">
+        <div class="kpi-header">
+          <span class="kpi-title">Daily Arrivals at Mandi</span>
+          <span class="kpi-chip">Supply</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpiArrivalsValue">--</span>
+            <span class="kpi-unit">Tonnes / day</span>
+          </div>
+          <div class="kpi-meta">
+            <span class="kpi-status-tag" id="kpiArrivalStatus">Supply Level: Normal</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Model Accuracy -->
+      <div class="kpi-card" id="kpiCardRmse">
+        <div class="kpi-header">
+          <span class="kpi-title">Model Accuracy (Test Data)</span>
+          <span class="kpi-chip">Evaluation Metrics</span>
+        </div>
+        <div class="kpi-body">
+          <div class="kpi-metrics-grid">
+            <div class="kpi-mini-metric">
+              <span class="mini-label">RMSE</span>
+              <span class="mini-val" id="kpiRmseVal">--</span>
+            </div>
+            <div class="kpi-mini-metric">
+              <span class="mini-label">MAPE</span>
+              <span class="mini-val" id="kpiMapeVal">--%</span>
+            </div>
+            <div class="kpi-mini-metric">
+              <span class="mini-label">R2 Score</span>
+              <span class="mini-val" id="kpiR2Val">--</span>
+            </div>
+          </div>
+          <div class="kpi-meta">
+            <span class="kpi-subtext">Tested on data the model has never seen</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Chart Section -->
+    <section class="chart-section" id="chartSection">
+      <div class="chart-card">
+        <div class="chart-toolbar">
+          <div class="chart-heading-group">
+            <h2 class="chart-title" id="chartMainTitle">Predicted vs Actual Prices</h2>
+            <p class="chart-subtitle">Comparing ML model predictions against real mandi prices</p>
+          </div>
+
+          <div class="chart-actions">
+            <!-- Series Toggles -->
+            <div class="series-toggles" id="seriesToggles">
+              <label class="toggle-pill active" id="toggleActual">
+                <input type="checkbox" checked id="chkActual">
+                <span class="toggle-swatch actual-swatch"></span> Actual Price
+              </label>
+              <label class="toggle-pill active" id="togglePred">
+                <input type="checkbox" checked id="chkPred">
+                <span class="toggle-swatch pred-swatch"></span> ML Prediction
+              </label>
+              <label class="toggle-pill" id="toggleBaseline">
+                <input type="checkbox" id="chkBaseline">
+                <span class="toggle-swatch baseline-swatch"></span> Naive Baseline
+              </label>
+              <label class="toggle-pill active" id="toggleArrivals">
+                <input type="checkbox" checked id="chkArrivals">
+                <span class="toggle-swatch arrival-swatch"></span> Arrivals (Tonnes)
+              </label>
+            </div>
+
+            <!-- Time Range Filter -->
+            <div class="time-range-filter" id="timeRangeFilter">
+              <button class="range-btn active" data-days="120">All Data</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-canvas-wrapper">
+          <canvas id="forecastChart" height="380"></canvas>
+        </div>
+        <div class="chart-footnote">
+          <span>* Prices in Rs per Quintal (100 kg). Arrivals in Metric Tonnes per day. Data similar to agmarknet.gov.in records.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Two-Column Analytics Section -->
+    <section class="analytics-dual-grid">
+      <!-- Left: Supply-Price Simulator -->
+      <div class="analytics-card simulator-card" id="simulatorCard">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="card-icon">⚡</span>
+            <h3 class="card-title">What-If Supply Change Simulator</h3>
+          </div>
+          <span class="badge-accent">Supply vs Price</span>
+        </div>
+        <p class="card-desc">
+          See what happens to the price if mandi arrivals (supply) suddenly increase or decrease. When supply drops, prices usually go up. When supply increases, prices usually come down.
+        </p>
+
+        <div class="simulator-body">
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span class="slider-title">CHANGE IN SUPPLY (ARRIVALS)</span>
+              <span class="slider-value-badge" id="shockSliderVal">0% (No Change)</span>
+            </div>
+            <input type="range" min="-50" max="50" value="0" step="5" class="custom-range-slider" id="arrivalShockSlider">
+            <div class="slider-ticks">
+              <span>-50% (Low Supply)</span>
+              <span>-25%</span>
+              <span>Normal</span>
+              <span>+25%</span>
+              <span>+50% (High Supply)</span>
+            </div>
+          </div>
+
+          <!-- Simulation Output -->
+          <div class="sim-results-grid">
+            <div class="sim-box">
+              <div class="sim-label">SIMULATED ARRIVALS</div>
+              <div class="sim-val" id="simArrivalVal">-- Tonnes</div>
+              <div class="sim-sub" id="simArrivalSub">Normal: --</div>
+            </div>
+            <div class="sim-arrow">→</div>
+            <div class="sim-box highlight">
+              <div class="sim-label">EXPECTED PRICE EFFECT</div>
+              <div class="sim-val" id="simPriceVal">Rs -- / qtl</div>
+              <div class="sim-sub" id="simPriceDelta">Change: --%</div>
+            </div>
+          </div>
+
+          <div class="sim-guidance" id="simGuidanceBox">
+            <span class="sim-guidance-icon">💡</span>
+            <span class="sim-guidance-text" id="simGuidanceText">
+              At normal supply levels, prices stay around their usual range.
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Data Cleaning Info -->
+      <div class="analytics-card outlier-card" id="outlierCard">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="card-icon">🧹</span>
+            <h3 class="card-title">Data Cleaning & Preprocessing</h3>
+          </div>
+          <span class="badge-neutral" id="outlierCountBadge">-- Errors Fixed</span>
+        </div>
+        <p class="card-desc">
+          Real Agmarknet data sometimes has typing mistakes (e.g., Rs 35,000 instead of Rs 3,500). We clean these errors before training our ML models. This is the Preprocessing step (Unit 2 of syllabus).
+        </p>
+
+        <div class="outlier-metrics-row">
+          <div class="audit-chip">
+            <span class="audit-chip-num" id="auditTotalRecords">--</span>
+            <span class="audit-chip-label">Total Records</span>
+          </div>
+          <div class="audit-chip">
+            <span class="audit-chip-num" id="auditOutliersCaught">--</span>
+            <span class="audit-chip-label">Errors Found</span>
+          </div>
+          <div class="audit-chip">
+            <span class="audit-chip-num" id="auditF1Score">--%</span>
+            <span class="audit-chip-label">Detection F1</span>
+          </div>
+          <div class="audit-chip">
+            <span class="audit-chip-num" id="auditRecall">--%</span>
+            <span class="audit-chip-label">Error Recall</span>
+          </div>
+        </div>
+
+        <div class="outlier-audit-table-wrapper">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>Error Type</th>
+                <th>Wrong Value</th>
+                <th>Corrected Value</th>
+                <th>How We Fixed It</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="tag-pill tag-red">Extra Zero (10x)</span></td>
+                <td>Rs 35,000 / qtl</td>
+                <td>Rs 3,500 / qtl</td>
+                <td>Price Range Check</td>
+              </tr>
+              <tr>
+                <td><span class="tag-pill tag-yellow">Missing Zero (0.1x)</span></td>
+                <td>Rs 350 / qtl</td>
+                <td>Rs 3,500 / qtl</td>
+                <td>Moving Average Filter</td>
+              </tr>
+              <tr>
+                <td><span class="tag-pill tag-purple">Sunday / Holiday</span></td>
+                <td>No data (market closed)</td>
+                <td>Estimated from nearby days</td>
+                <td>Interpolation</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Model Comparison Table -->
+    <section class="benchmark-section" id="benchmarkSection">
+      <div class="benchmark-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="card-icon">🏆</span>
+            <h3 class="card-title">ML Model Comparison Table</h3>
+          </div>
+          <span class="badge-neutral" id="leaderboardMandiTag">Mandi: Lasalgaon</span>
+        </div>
+        <p class="card-desc">
+          Comparing all ML models to find which one predicts mandi prices most accurately. Lower RMSE = better prediction. Higher R2 = better fit. The best model is highlighted in green.
+        </p>
+
+        <div class="table-responsive">
+          <table class="leaderboard-table" id="leaderboardTable">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>ML Model</th>
+                <th>RMSE (Rs)</th>
+                <th>MAE (Rs)</th>
+                <th>MAPE (%)</th>
+                <th>R2 Score</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1 Score</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Project Info Modal -->
+    <div class="modal-overlay" id="paperModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-icon">📄</span>
+            <h3 class="modal-title">About This Project</h3>
+          </div>
+          <button class="modal-close-btn" id="btnClosePaperModal">✕</button>
+        </div>
+        <div class="modal-body" id="paperModalContent">
+          <div class="paper-summary-header">
+            <h4>Mandi Price Prediction Using Machine Learning</h4>
+            <p class="paper-meta">
+              <strong>Subject:</strong> DSC-17 Machine Learning | <strong>Data Source:</strong> agmarknet.gov.in
+            </p>
+            <div class="paper-sdg-bar">
+              <span class="paper-sdg-badge">SDG 2: Zero Hunger</span>
+              <span class="paper-sdg-badge">SDG 12: Responsible Consumption</span>
+              <span class="paper-sdg-badge">Data: Agmarknet Portal</span>
+            </div>
+          </div>
+
+          <div class="paper-text-section">
+            <h5>ML Concepts Used (DSC-17 Syllabus)</h5>
+            <ul>
+              <li><strong>Preprocessing (Unit 2):</strong> Feature Scaling using StandardScaler, removing outliers and wrong data entries from Agmarknet records.</li>
+              <li><strong>Linear Regression (Unit 3):</strong> Predicting price using a linear equation: y = w1*x1 + w2*x2 + ... + b. Uses gradient descent to find best weights.</li>
+              <li><strong>Ridge Regression (Unit 3):</strong> Linear Regression with L2 regularization to prevent overfitting on small datasets.</li>
+              <li><strong>k-NN Regressor (Unit 4):</strong> Finds the k most similar past market days and averages their next-week prices to make a prediction.</li>
+              <li><strong>MLP Neural Network (Unit 4):</strong> Multi-layer perceptron with hidden layers, ReLU activation, and backpropagation algorithm for training.</li>
+              <li><strong>Evaluation Metrics (Unit 3):</strong> RMSE, MAE, MAPE, and R2 Score to measure how good each model's predictions are.</li>
+            </ul>
+          </div>
+
+          <div class="paper-actions-footer">
+            <button class="btn btn-primary" id="btnDownloadSummary">
+              📊 Download Model Comparison (CSV)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <div class="footer-left">
+          <span class="footer-brand">AgriMandi Price Prediction System</span>
+          <span class="footer-copy">DSC-17 Machine Learning Project | SDGs 2 & 12</span>
+        </div>
+        <div class="footer-right">
+          <span class="footer-licence">Data: Agmarknet (agmarknet.gov.in) | Prices in Rs per Quintal</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
